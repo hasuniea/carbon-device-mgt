@@ -19,6 +19,7 @@
 package org.wso2.carbon.device.mgt.core.dao.impl.device;
 
 import org.wso2.carbon.device.mgt.common.Device;
+import org.wso2.carbon.device.mgt.common.EnrolmentInfo;
 import org.wso2.carbon.device.mgt.common.PaginationRequest;
 import org.wso2.carbon.device.mgt.core.dao.DeviceManagementDAOException;
 import org.wso2.carbon.device.mgt.core.dao.DeviceManagementDAOFactory;
@@ -218,6 +219,42 @@ public class GenericDeviceDAOImpl extends AbstractDeviceDAOImpl {
                                                    "'" + request.getDeviceName() + "'", e);
         } finally {
             DeviceManagementDAOUtil.cleanupResources(stmt, null);
+        }
+        return devices;
+    }
+
+    @Override
+    public List<Device> getUnRemovedDevices(String type, int tenantId)
+            throws DeviceManagementDAOException {
+        Connection conn;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        List<Device> devices;
+        try {
+            conn = this.getConnection();
+            String sql = "SELECT d1.ID AS DEVICE_ID, d1.DESCRIPTION, d1.NAME AS DEVICE_NAME, d1.DEVICE_TYPE, " +
+                    "d1.DEVICE_IDENTIFICATION, e.OWNER, e.OWNERSHIP, e.STATUS, e.DATE_OF_LAST_UPDATE, " +
+                    "e.DATE_OF_ENROLMENT, e.ID AS ENROLMENT_ID FROM DM_ENROLMENT e, (SELECT d.ID, d.DESCRIPTION, " +
+                    "d.NAME, d.DEVICE_IDENTIFICATION, t.NAME AS DEVICE_TYPE FROM DM_DEVICE d, " +
+                    "DM_DEVICE_TYPE t WHERE DEVICE_TYPE_ID = t.ID AND t.NAME = ? " +
+                    "AND t.ID = d.DEVICE_TYPE_ID AND d.TENANT_ID = ?) d1 WHERE d1.ID = e.DEVICE_ID AND TENANT_ID = ?" +
+                    " AND e.STATUS != 'REMOVED' ORDER BY e.DATE_OF_LAST_UPDATE DESC";
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, type);
+            stmt.setInt(2, tenantId);
+            stmt.setInt(3, tenantId);
+            rs = stmt.executeQuery();
+            devices = new ArrayList<>();
+            while (rs.next()) {
+                Device device = DeviceManagementDAOUtil.loadActiveDevice(rs, false);
+                if (device != null) {
+                    devices.add(device);
+                }
+            }
+        } catch (SQLException e) {
+            throw new DeviceManagementDAOException("Error occurred while listing devices for type '" + type + "'", e);
+        } finally {
+            DeviceManagementDAOUtil.cleanupResources(stmt, rs);
         }
         return devices;
     }

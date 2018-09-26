@@ -374,6 +374,17 @@ public interface DeviceDAO {
     List<Device> getDevicesByStatus(EnrolmentInfo.Status status, int tenantId) throws DeviceManagementDAOException;
 
     /**
+     * This method is used to retrieve Devices of a given device type.
+     *
+     * @param type     Device Type to be retrieved.
+     * @param tenantId Tenant Id.
+     * @return returns list of devices of given device type and status.
+     * @throws DeviceManagementDAOException If some unusual behaviour is observed while fetching the
+     *                                      devices.
+     */
+    List<Device> getUnRemovedDevices(String type, int tenantId) throws DeviceManagementDAOException;
+
+    /**
      * This method is used to retrieve devices of a given ownership as a paginated result.
      *
      * @param request  PaginationRequest object holding the data for pagination and device search.

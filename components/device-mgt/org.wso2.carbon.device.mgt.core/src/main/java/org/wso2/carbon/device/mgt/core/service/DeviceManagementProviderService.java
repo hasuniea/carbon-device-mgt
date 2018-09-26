@@ -61,6 +61,15 @@ public interface DeviceManagementProviderService {
      */
     List<Device> getAllDevices(String deviceType) throws DeviceManagementException;
 
+
+    /**
+     * Method to retrieve all the devices of given device type.
+     * @param deviceType Device-type of the required devices.
+     * @return List of devices of the given device type.
+     * @throws DeviceManagementException If some unusual behaviour is observed while fetching the device.
+     */
+    List<Device> getAllUnRemovedDevicesByStatus(String deviceType) throws DeviceManagementException;
+
     /**
      * Method to retrieve all the devices of a given device type.
      *

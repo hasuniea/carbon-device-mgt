@@ -24,20 +24,7 @@ import org.wso2.carbon.CarbonConstants;
 import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
 import org.wso2.carbon.device.mgt.analytics.data.publisher.exception.DataPublisherConfigurationException;
-import org.wso2.carbon.device.mgt.common.Device;
-import org.wso2.carbon.device.mgt.common.DeviceIdentifier;
-import org.wso2.carbon.device.mgt.common.DeviceManagementException;
-import org.wso2.carbon.device.mgt.common.DeviceManager;
-import org.wso2.carbon.device.mgt.common.DeviceNotFoundException;
-import org.wso2.carbon.device.mgt.common.EnrolmentInfo;
-import org.wso2.carbon.device.mgt.common.FeatureManager;
-import org.wso2.carbon.device.mgt.common.InitialOperationConfig;
-import org.wso2.carbon.device.mgt.common.InvalidDeviceException;
-import org.wso2.carbon.device.mgt.common.MonitoringOperation;
-import org.wso2.carbon.device.mgt.common.OperationMonitoringTaskConfig;
-import org.wso2.carbon.device.mgt.common.PaginationRequest;
-import org.wso2.carbon.device.mgt.common.PaginationResult;
-import org.wso2.carbon.device.mgt.common.TransactionManagementException;
+import org.wso2.carbon.device.mgt.common.*;
 import org.wso2.carbon.device.mgt.common.app.mgt.Application;
 import org.wso2.carbon.device.mgt.common.configuration.mgt.ConfigurationManagementException;
 import org.wso2.carbon.device.mgt.common.configuration.mgt.PlatformConfiguration;
@@ -62,12 +49,7 @@ import org.wso2.carbon.device.mgt.common.spi.DeviceManagementService;
 import org.wso2.carbon.device.mgt.core.DeviceManagementConstants;
 import org.wso2.carbon.device.mgt.core.DeviceManagementPluginRepository;
 import org.wso2.carbon.device.mgt.core.cache.impl.DeviceCacheManagerImpl;
-import org.wso2.carbon.device.mgt.core.dao.ApplicationDAO;
-import org.wso2.carbon.device.mgt.core.dao.DeviceDAO;
-import org.wso2.carbon.device.mgt.core.dao.DeviceManagementDAOException;
-import org.wso2.carbon.device.mgt.core.dao.DeviceManagementDAOFactory;
-import org.wso2.carbon.device.mgt.core.dao.DeviceTypeDAO;
-import org.wso2.carbon.device.mgt.core.dao.EnrollmentDAO;
+import org.wso2.carbon.device.mgt.core.dao.*;
 import org.wso2.carbon.device.mgt.core.device.details.mgt.DeviceInformationManager;
 import org.wso2.carbon.device.mgt.core.device.details.mgt.dao.DeviceDetailsDAO;
 import org.wso2.carbon.device.mgt.core.device.details.mgt.dao.DeviceDetailsMgtDAOException;
@@ -81,25 +63,12 @@ import org.wso2.carbon.device.mgt.core.internal.DeviceManagementServiceComponent
 import org.wso2.carbon.device.mgt.core.internal.PluginInitializationListener;
 import org.wso2.carbon.device.mgt.core.operation.mgt.CommandOperation;
 import org.wso2.carbon.device.mgt.core.util.DeviceManagerUtil;
-import org.wso2.carbon.email.sender.core.ContentProviderInfo;
-import org.wso2.carbon.email.sender.core.EmailContext;
-import org.wso2.carbon.email.sender.core.EmailSendingFailedException;
-import org.wso2.carbon.email.sender.core.EmailTransportNotConfiguredException;
-import org.wso2.carbon.email.sender.core.TypedValue;
+import org.wso2.carbon.email.sender.core.*;
 import org.wso2.carbon.email.sender.core.service.EmailSenderService;
 import org.wso2.carbon.user.api.UserStoreException;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 
 public class DeviceManagementProviderServiceImpl implements DeviceManagementProviderService,
         PluginInitializationListener {
@@ -491,6 +460,38 @@ public class DeviceManagementProviderServiceImpl implements DeviceManagementProv
     @Override
     public List<Device> getAllDevices(String deviceType) throws DeviceManagementException {
         return this.getAllDevices(deviceType, true);
+    }
+
+    @Override
+    public List<Device> getAllUnRemovedDevicesByStatus(String deviceType)
+            throws DeviceManagementException {
+        if (deviceType == null) {
+            String msg = "Either device type or device enrolment status is empty for getAllDevices";
+            throw new DeviceManagementException(msg);
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Getting all devices of type '" + deviceType + "'");
+        }
+        List<Device> allDevices;
+        try {
+            DeviceManagementDAOFactory.openConnection();
+            allDevices = deviceDAO.getUnRemovedDevices(deviceType, this.getTenantId());
+            if (allDevices == null) {
+                if (log.isDebugEnabled()) {
+                    log.debug("No device is found upon the type '" + deviceType + "'" +
+                            " and Enrollment status ''");
+                }
+                return null;
+            }
+        } catch (SQLException e) {
+            String msg = "Error occurred while opening a connection to the data source";
+            throw new DeviceManagementException(msg, e);
+        } catch (DeviceManagementDAOException e) {
+            String msg = "Error occurred while retrieving all devices of type '" +
+                    deviceType + "' that are being managed within the scope of current tenant";
+            throw new DeviceManagementException(msg, e);
+        }
+        return allDevices;
     }
 
     @Override
